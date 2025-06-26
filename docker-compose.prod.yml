@@ -1,31 +1,38 @@
-version: '3.8'
+
+
 
 services:
   web:
     build:
-      context: ./app
-      dockerfile: Dockerfile
-    command: gunicorn setup.wsgi:application --bind 0.0.0.0:8000
+      context: .
+      dockerfile: docker/django/Dockerfile
     volumes:
-      - static_volume:/home/app/web/staticfiles
+      - static_volume:/app/static
+    depends_on:
+      - db
     expose:
-      - 8000
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "8000"
 
   nginx:
-    build: ./scripts/dockerfiles/nginx
-    volumes:
-      - static_volume:/home/app/web/staticfiles
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
     ports:
-      - 80:80
+      - "80:80"
+    volumes:
+      - static_volume:/app/static
     depends_on:
-      web:
-        condition: service_healthy
-    command: ["nginx", "-g", "daemon off;"]
+      - web
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: django
+      POSTGRES_USER: django
+      POSTGRES_PASSWORD: django
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
 
 volumes:
   static_volume:
+  postgres_data:
